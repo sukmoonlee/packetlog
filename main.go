@@ -248,6 +248,7 @@ func main() {
 
 		if dns.QR == false { // request
 			var result2 string
+			var qstring []byte
 			if localAddr[DstIP] == "" { // Server Request
 				if *logSplit == false {
 					result2 = " SQ "
@@ -263,9 +264,15 @@ func main() {
 					SaveLog.lType = "CQ"
 				}
 			}
-			SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s%s%04X %02d %s %s %s%s\n", time.Unix(0, nanos).Format("15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, result2, dns.ID, dns.OpCode, dns.Questions[0].Name, dns.Questions[0].Class, dns.Questions[0].Type, TCPFlag)
+			if len(dns.Questions[0].Name) == 0 {
+				qstring = []byte(".")
+			} else {
+				qstring = dns.Questions[0].Name
+			}
+			SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s%s%04X %02d %s %s %s%s\n", time.Unix(0, nanos).Format("15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, result2, dns.ID, dns.OpCode, qstring, dns.Questions[0].Class, dns.Questions[0].Type, TCPFlag)
 		} else { // response
 			var result, result2 string
+			var qstring []byte
 			if dns.ANCount != 0 {
 				switch dns.Answers[0].Type {
 				case 1: //DNSTypeA:
@@ -312,9 +319,19 @@ func main() {
 					result = fmt.Sprintf("%s", dns.Answers[0].OPT)
 				}
 
-				result = fmt.Sprintf("%s %s %s %d ", dns.Answers[0].Name, dns.Answers[0].Class, dns.Answers[0].Type, dns.Answers[0].TTL) + result
+				if len(dns.Answers[0].Name) == 0 {
+					qstring = []byte(".")
+				} else {
+					qstring = dns.Answers[0].Name
+				}
+				result = fmt.Sprintf("%s %s %s %d ", qstring, dns.Answers[0].Class, dns.Answers[0].Type, dns.Answers[0].TTL) + result
 			} else {
-				result = fmt.Sprintf("%s %s %s", dns.Questions[0].Name, dns.Questions[0].Class, dns.Questions[0].Type)
+				if len(dns.Questions[0].Name) == 0 {
+					qstring = []byte(".")
+				} else {
+					qstring = dns.Questions[0].Name
+				}
+				result = fmt.Sprintf("%s %s %s", qstring, dns.Questions[0].Class, dns.Questions[0].Type)
 			}
 
 			if localAddr[DstIP] == "" { // Client Response
