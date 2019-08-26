@@ -17,7 +17,6 @@ import (
 	"os"
 	"runtime/pprof"
 	"strconv"
-	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -98,6 +97,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("afpacket pageSize:%d bufferSize:%d szFrame:%d szBlock:%d numBlocks:%d", os.Getpagesize(), *bufferSize, szFrame, szBlock, numBlocks)
 	afpacketHandle, err := newAfpacketHandle(*iface, szFrame, szBlock, numBlocks, *addVLAN, pcap.BlockForever)
 	if err != nil {
 		log.Fatal(err)
@@ -160,7 +160,7 @@ func main() {
 	packets := uint64(0)
 	drops := uint(0)
 	for ; *count != 0; *count-- {
-		data, _, err := source.ZeroCopyReadPacketData()
+		data, ci, err := source.ZeroCopyReadPacketData()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -243,9 +243,6 @@ func main() {
 			DstIP = fmt.Sprintf("%s", ip6.DstIP)
 		}
 
-		now := time.Now()
-		nanos := now.UnixNano()
-
 		if dns.QR == false { // request
 			var result2 string
 			var qstring []byte
@@ -269,7 +266,7 @@ func main() {
 			} else {
 				qstring = dns.Questions[0].Name
 			}
-			SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s%s%04X %02d %s %s %s%s\n", time.Unix(0, nanos).Format("15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, result2, dns.ID, dns.OpCode, qstring, dns.Questions[0].Class, dns.Questions[0].Type, TCPFlag)
+			SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s%s%04X %02d %s %s %s%s\n", ci.Timestamp.Format("15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, result2, dns.ID, dns.OpCode, qstring, dns.Questions[0].Class, dns.Questions[0].Type, TCPFlag)
 		} else { // response
 			var result, result2 string
 			var qstring []byte
@@ -349,7 +346,7 @@ func main() {
 					SaveLog.lType = "SR"
 				}
 			}
-			SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s%s%04X %02d %d/%d/%d/%d %s%s\n", time.Unix(0, nanos).Format("15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, result2, dns.ID, dns.ResponseCode, dns.QDCount, dns.ANCount, dns.NSCount, dns.ARCount, result, TCPFlag)
+			SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s%s%04X %02d %d/%d/%d/%d %s%s\n", ci.Timestamp.Format("15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, result2, dns.ID, dns.ResponseCode, dns.QDCount, dns.ANCount, dns.NSCount, dns.ARCount, result, TCPFlag)
 		}
 
 		logChannel <- SaveLog

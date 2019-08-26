@@ -7,7 +7,7 @@
 # Default Configure
 DNSLOG_DEVICE=eth0
 DNSLOG_SNAPLEN=1560
-DNSLOG_BUFSUZE=8
+DNSLOG_BUFSIZE=32
 DNSLOG_FILTER="port 53"
 DNSLOG_DIR="/tmp"
 
@@ -22,14 +22,15 @@ fi
 
 export DNSLOG_DEVICE
 export DNSLOG_SNAPLEN
-export DNSLOG_BUFSUZE
+export DNSLOG_BUFSIZE
 export DNSLOG_FILTER
 export DNSLOG_DIR
 
 case "$1" in
 start)
-	#./dnslog &
-	./dnslog -log_split &
+	./dnslog &
+	#./dnslog -log_split &
+	#./dnslog -cpuprofile dnslog.prof -c 1000000 &
 	rc=$?
 	;;
 stop)
