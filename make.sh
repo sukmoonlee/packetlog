@@ -7,7 +7,9 @@ rm -f dnslog
 set -x
 find . -name '*.go' -exec goimports -d -w {} \;
 golint -min_confidence=0.1 .
-go build -o dnslog
+go build -v -o dnslog
+#go build -v -race -o dnslog
+#go build -v -msan -o dnslog
 
 { set +x; } 2> /dev/null
 if [ -f dnslog ] ; then

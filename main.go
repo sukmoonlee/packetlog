@@ -15,20 +15,22 @@ import (
 	"log/syslog"
 	"net"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"strconv"
 
 	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 )
 
 // PGversion is build version - read README/CHANGE
-const PGversion = "1.0.0-20190824"
+const PGversion = "1.0.1-20190828"
 
+var localAddr = make(map[string]string)
 var (
 	iface      = flag.String("i", getEnvStr("DNSLOG_DEVICE", "bond1"), "Interface to read from")
 	cpuprofile = flag.String("cpuprofile", "", "If non-empty, write CPU profile here")
+	cpuNo      = flag.Int("cpu", getEnvInt("DNSLOG_CPUNO", runtime.NumCPU()), "Number of DNS parsing goroutine")
 	snaplen    = flag.Int("s", getEnvInt("DNSLOG_SNAPLEN", 1560), "Snaplen, if <= 0, use 65535")
 	bufferSize = flag.Int("b", getEnvInt("DNSLOG_BUFSIZE", 8), "Interface buffersize (MB)")
 	filter     = flag.String("f", getEnvStr("DNSLOG_FILTER", "port 53"), "BPF filter")
@@ -42,7 +44,7 @@ var (
 
 func getEnvStr(name string, def string) string {
 	content, found := os.LookupEnv(name)
-	if found {
+	if found && content != "" {
 		return content
 	}
 	return def
@@ -50,7 +52,7 @@ func getEnvStr(name string, def string) string {
 
 func getEnvInt(name string, def int) int {
 	content, found := os.LookupEnv(name)
-	if found {
+	if found && content != "" {
 		parsed, err := strconv.ParseInt(content, 0, 32)
 		if err == nil {
 			return int(parsed)
@@ -62,7 +64,13 @@ func getEnvInt(name string, def int) int {
 }
 
 func main() {
+	if runtime.NumCPU() == 1 {
+		*cpuNo = 1
+	} else {
+		*cpuNo = runtime.NumCPU() / 2
+	}
 	flag.Parse()
+
 	if *showVer {
 		fmt.Printf("dnslog version: %s\n", PGversion)
 		return
@@ -111,8 +119,8 @@ func main() {
 
 	logSetup(*logdir)
 	log.Printf("logging directory: %s", *logdir)
+	packetSetup()
 
-	localAddr := make(map[string]string)
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		panic(err)
@@ -178,177 +186,11 @@ func main() {
 			}
 		}
 
-		packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.Default)
+		var capturePacket packetMessage
+		capturePacket.data = make([]byte, *snaplen)
+		copy(capturePacket.data, data[:])
+		capturePacket.ci = ci
 
-		var SaveLog logMessage
-		var SrcIP string
-		var DstIP string
-		var SrcPort string
-		var DstPort string
-		dns := &layers.DNS{}
-		TCPFlag := ""
-
-		if dnsLayer := packet.Layer(layers.LayerTypeDNS); dnsLayer != nil {
-			dns, _ = dnsLayer.(*layers.DNS)
-			//fmt.Printf("DNS: %s\n", gopacket.LayerDump(dns))
-
-			udpLayer := packet.Layer(layers.LayerTypeUDP)
-			if udpLayer != nil {
-				udp, _ := udpLayer.(*layers.UDP)
-				SrcPort = fmt.Sprintf("%d", udp.SrcPort)
-				DstPort = fmt.Sprintf("%d", udp.DstPort)
-			} else {
-				for _, layer := range packet.Layers() {
-					log.Println(layer.LayerType())
-				}
-			}
-		} else if payloadLayer := packet.Layer(gopacket.LayerTypePayload); payloadLayer != nil {
-			var decoded []gopacket.LayerType
-
-			data := payloadLayer.LayerContents()
-			dnsParser := gopacket.NewDecodingLayerParser(layers.LayerTypeDNS, dns)
-			err := dnsParser.DecodeLayers(data[2:], &decoded)
-			if err != nil {
-				log.Printf("decoding error: %v", err)
-				log.Println(gopacket.LayerDump(payloadLayer))
-				continue
-			}
-
-			TCPFlag = " T"
-			tcpLayer := packet.Layer(layers.LayerTypeTCP)
-			if tcpLayer != nil {
-				tcp, _ := tcpLayer.(*layers.TCP)
-				SrcPort = fmt.Sprintf("%d", tcp.SrcPort)
-				DstPort = fmt.Sprintf("%d", tcp.DstPort)
-			} else {
-				for _, layer := range packet.Layers() {
-					log.Println(layer.LayerType())
-				}
-				log.Println(gopacket.LayerDump(payloadLayer))
-				continue
-			}
-		} else {
-			continue
-		}
-
-		ip4Layer := packet.Layer(layers.LayerTypeIPv4)
-		if ip4Layer != nil {
-			ip4, _ := ip4Layer.(*layers.IPv4)
-			SrcIP = fmt.Sprintf("%s", ip4.SrcIP)
-			DstIP = fmt.Sprintf("%s", ip4.DstIP)
-		} else {
-			ip6Layer := packet.Layer(layers.LayerTypeIPv6)
-			ip6, _ := ip6Layer.(*layers.IPv6)
-			SrcIP = fmt.Sprintf("%s", ip6.SrcIP)
-			DstIP = fmt.Sprintf("%s", ip6.DstIP)
-		}
-
-		if dns.QR == false { // request
-			var result2 string
-			var qstring []byte
-			if localAddr[DstIP] == "" { // Server Request
-				if *logSplit == false {
-					result2 = " SQ "
-				} else {
-					result2 = ""
-					SaveLog.lType = "SQ"
-				}
-			} else { // Client Request
-				if *logSplit == false {
-					result2 = " CQ "
-				} else {
-					result2 = ""
-					SaveLog.lType = "CQ"
-				}
-			}
-			if len(dns.Questions[0].Name) == 0 {
-				qstring = []byte(".")
-			} else {
-				qstring = dns.Questions[0].Name
-			}
-			SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s%s%04X %02d %s %s %s%s\n", ci.Timestamp.Format("15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, result2, dns.ID, dns.OpCode, qstring, dns.Questions[0].Class, dns.Questions[0].Type, TCPFlag)
-		} else { // response
-			var result, result2 string
-			var qstring []byte
-			if dns.ANCount != 0 {
-				switch dns.Answers[0].Type {
-				case 1: //DNSTypeA:
-					result = fmt.Sprintf("%s", dns.Answers[0].IP)
-				case 28: //DNSTypeAAAA:
-					result = fmt.Sprintf("%s", dns.Answers[0].IP)
-				case 16, 13: //DNSTypeTXT, DNSTypeHINFO:
-					result = fmt.Sprintf("%s", dns.Answers[0].TXT)
-				case 2: //DNSTypeNS:
-					result = fmt.Sprintf("%s", dns.Answers[0].NS)
-				case 5: //DNSTypeCNAME:
-					result = fmt.Sprintf("%s", dns.Answers[0].CNAME)
-					for i := 1; i < int(dns.ANCount); i++ {
-						if dns.Answers[i].Type == 1 || dns.Answers[i].Type == 28 {
-							result += fmt.Sprintf(" (%s %d %s %s %s)",
-								dns.Answers[i].Name,
-								dns.Answers[i].TTL,
-								dns.Answers[i].Class,
-								dns.Answers[i].Type,
-								dns.Answers[i].IP)
-							break
-						}
-					}
-				case 12: //DNSTypePTR:
-					result = fmt.Sprintf("%s", dns.Answers[0].PTR)
-				case 6: //DNSTypeSOA:
-					result = fmt.Sprintf("%s %s (%d %d %d %d %d)",
-						dns.Answers[0].SOA.MName,
-						dns.Answers[0].SOA.RName,
-						dns.Answers[0].SOA.Serial,
-						dns.Answers[0].SOA.Refresh,
-						dns.Answers[0].SOA.Retry,
-						dns.Answers[0].SOA.Expire,
-						dns.Answers[0].SOA.Minimum)
-				case 15: //DNSTypeMX:
-					result = fmt.Sprintf("%d %s", dns.Answers[0].MX.Preference, dns.Answers[0].MX.Name)
-				case 33: //DNSTypeSRV:
-					result = fmt.Sprintf("%d %d %d %s",
-						dns.Answers[0].SRV.Priority,
-						dns.Answers[0].SRV.Weight,
-						dns.Answers[0].SRV.Port,
-						dns.Answers[0].SRV.Name)
-				case 41: //DNSTypeOPT:
-					result = fmt.Sprintf("%s", dns.Answers[0].OPT)
-				}
-
-				if len(dns.Answers[0].Name) == 0 {
-					qstring = []byte(".")
-				} else {
-					qstring = dns.Answers[0].Name
-				}
-				result = fmt.Sprintf("%s %s %s %d ", qstring, dns.Answers[0].Class, dns.Answers[0].Type, dns.Answers[0].TTL) + result
-			} else {
-				if len(dns.Questions[0].Name) == 0 {
-					qstring = []byte(".")
-				} else {
-					qstring = dns.Questions[0].Name
-				}
-				result = fmt.Sprintf("%s %s %s", qstring, dns.Questions[0].Class, dns.Questions[0].Type)
-			}
-
-			if localAddr[DstIP] == "" { // Client Response
-				if *logSplit == false {
-					result2 = " CR "
-				} else {
-					result2 = ""
-					SaveLog.lType = "CR"
-				}
-			} else { // Server Response
-				if *logSplit == false {
-					result2 = " SR "
-				} else {
-					result2 = ""
-					SaveLog.lType = "SR"
-				}
-			}
-			SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s%s%04X %02d %d/%d/%d/%d %s%s\n", ci.Timestamp.Format("15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, result2, dns.ID, dns.ResponseCode, dns.QDCount, dns.ANCount, dns.NSCount, dns.ARCount, result, TCPFlag)
-		}
-
-		logChannel <- SaveLog
+		packetChannel <- capturePacket
 	}
 }
