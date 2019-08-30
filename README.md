@@ -1,9 +1,11 @@
 # packetlog
-네트워크 특정 패킷을 파일로 저장해서 분석하기 위한 프로그램
+대량의 네트워크 패킷을 Text 형식의 파일로 저장하기 위한 프로그램
+
+![Alt text](/docs/intro.png "Packetlog Introduce")
 
 ## dnslog
 * DNS 프로토콜을 분석하기 위한 프로그램
-* GO + GoPacket + afpacket with zero-copy + Asynchronous Log 기능을 구현
+* GO(channel, goroutine) + GoPacket + AF_PACKET with zero-copy + Asynchronous Log 기능을 구현
 * Client Query(CQ), Client Response(CR), Server Query(SQ), Server Response(SR) 4가지 유형의 로그로 저장
 * UDP/TCP 패킷에 대한 로그는 저장하지만, 처리 성능을 고려해서 패킷 Assembly은 지원하지 않음
 
@@ -96,29 +98,31 @@ $
 ### Usage
 
 <pre><code>
-    $ ./dnslog -h
-    Usage of ./dnslog:
-      -add_vlan
-            If true, add VLAN header
-      -b int
-            Interface buffersize (MB) (default 8)
-      -c int
-            If >= 0, # of packets to capture before returning (default -1)
-      -cpuprofile string
-            If non-empty, write CPU profile here
-      -d string
-            Write directory for log file (default "/log/dnslog")
-      -f string
-            BPF filter (default "port 53")
-      -i string
-            Interface to read from (default "bond1")
-      -log_every int
-            Write a every X packets stat (default 100000)
-      -log_split
-            If true, write a split log file (CQ, CR, SQ, SR)
-      -s int
-            Snaplen, if <= 0, use 65535 (default 1560)
-      -v    If true, show version
+$ ./dnslog -h
+Usage of ./dnslog:
+  -add_vlan
+        If true, add VLAN header
+  -b int
+        Interface buffersize (MB) (default 8)
+  -c int
+        If >= 0, # of packets to capture before returning (default -1)
+  -cpu int
+        Number of DNS parsing goroutine (default 6)
+  -cpuprofile string
+        If non-empty, write CPU profile here
+  -d string
+        Write directory for log file (default "/log/dnslog")
+  -f string
+        BPF filter (default "port 53")
+  -i string
+        Interface to read from (default "eth0")
+  -log_every int
+        Write a every X packets stat (default 100000)
+  -log_split
+        If true, write a split log file (CQ, CR, SQ, SR)
+  -s int
+        Snaplen, if <= 0, use 65535 (default 1560)
+  -v    If true, show version
 </code></pre>
 
 ### Build and install
@@ -126,6 +130,7 @@ $
 <pre><code>
 # yum install golang libpcap libpcap-devel
 # git clone https://github.com/sukmoonlee/packetlog.git
+# cd dnslog
 # go get
 # go build -o dnslog   (or make.sh)
 
