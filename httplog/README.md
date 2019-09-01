@@ -1,15 +1,12 @@
-# packetlog
-대량의 네트워크 패킷을 Text 형식의 파일로 저장하기 위한 프로그램
-
-![Alt text](/docs/intro.png "Packetlog Introduce")
-
-## httplog
-* HTTP 프로토콜을 분석하기 위한 프로그램
+# httplog
+* HTTP 프로토콜을 분석하여 Text 파일로 저장하기 위한 프로그램
 * GO(channel, goroutine) + GoPacket + AF_PACKET with zero-copy + Asynchronous Log 기능을 구현
 * Client Query(CQ), Client Response(CR), Server Query(SQ), Server Response(SR) 4가지 유형의 로그로 저장
 * TCP 패킷에 대한 로그는 저장하지만, 처리 성능을 고려해서 패킷 Assembly을 하지 않고 로그 기능 처리
 
-### 사용법
+![Alt text](/docs/intro.png "Packetlog Introduce")
+
+## 사용법
 * /etc/sysconfig/httplog 혹은 httplog.conf 파일을 통해서 환경 변수 혹은 파라메터를 이용해서 설정 파일을 조정이 가능
 * 로그 파일은 -log_split 파라메터를 이용해서 1개의 파일 혹은 4개의 파일로 저장이 가능
 * 포함되어 있는 start_httplog.sh를 이용해서 root 권한으로 실행이 필요함
@@ -26,8 +23,7 @@ $ cat /tmp/http-20190901.log
 $
 </code></pre>
 
-### Usage
-
+## Usage
 <pre><code>
 $ ./httplog -h
 Usage of ./httplog:
@@ -56,8 +52,7 @@ Usage of ./httplog:
   -v    If true, show version
 </code></pre>
 
-### Build and install
-
+## Build and Install
 <pre><code>
 # yum install golang libpcap libpcap-devel
 # git clone https://github.com/sukmoonlee/packetlog.git

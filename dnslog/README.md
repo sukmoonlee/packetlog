@@ -1,15 +1,12 @@
-# packetlog
-대량의 네트워크 패킷을 Text 형식의 파일로 저장하기 위한 프로그램
-
-![Alt text](/docs/intro.png "Packetlog Introduce")
-
-## dnslog
-* DNS 프로토콜을 분석하기 위한 프로그램
+# dnslog
+* DNS 프로토콜을 분석하여 Text 파일로 저장하기 위한 프로그램
 * GO(channel, goroutine) + GoPacket + AF_PACKET with zero-copy + Asynchronous Log 기능을 구현
 * Client Query(CQ), Client Response(CR), Server Query(SQ), Server Response(SR) 4가지 유형의 로그로 저장
 * UDP/TCP 패킷에 대한 로그는 저장하지만, 처리 성능을 고려해서 패킷 Assembly은 지원하지 않음
 
-### 사용법
+![Alt text](/docs/intro.png "Packetlog Introduce")
+
+## 사용법
 * /etc/sysconfig/dnslog 혹은 dnslog.conf 파일을 통해서 환경 변수 혹은 파라메터를 이용해서 설정 파일을 조정이 가능
 * 로그 파일은 -log_split 파라메터를 이용해서 1개의 파일 혹은 4개의 파일로 저장이 가능
 * 포함되어 있는 start_dnslog.sh를 이용해서 root 권한으로 실행이 필요함
@@ -53,7 +50,7 @@ $ cat /tmp/dns-20190826-16.log
 16:56:51.641 172.1.214.13#53 172.1.214.14#9762 CR A804 00 1/2/4/0 www.sukmoonlee.com IN CNAME 1800 ghs.google.com (ghs.google.com 300 IN AAAA 2404:6800:4004:806::2013)
 $
 </code></pre>
-* 쿼리 유형 단위 로그 파일 저장
+* 쿼리 유형(CQ, CR, SQ, SR) 단위 로그 파일 저장
 <pre><code>
 $ ls -al /tmp/*.log
 -rw------- 1 root root  534 Aug 26 17:00 /tmp/dns-CQ-20190826-17.log
@@ -94,9 +91,7 @@ $ cat /tmp/dns-SR-20190826-17.log
 $
 </code></pre>
 
-
-### Usage
-
+## Usage
 <pre><code>
 $ ./dnslog -h
 Usage of ./dnslog:
@@ -125,8 +120,7 @@ Usage of ./dnslog:
   -v    If true, show version
 </code></pre>
 
-### Build and install
-
+## Build and Install
 <pre><code>
 # yum install golang libpcap libpcap-devel
 # git clone https://github.com/sukmoonlee/packetlog.git
