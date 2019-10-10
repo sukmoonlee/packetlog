@@ -166,6 +166,11 @@ func packetSetup() {
 								dns.Answers[0].SRV.Name)
 						case 41: //DNSTypeOPT:
 							result = fmt.Sprintf("%s", dns.Answers[0].OPT)
+						case 256: //DNSTypeURI:
+							result = fmt.Sprintf("%d %d %s",
+								dns.Answers[0].URI.Priority,
+								dns.Answers[0].URI.Weight,
+								dns.Answers[0].URI.Target)
 						}
 
 						if len(dns.Answers[0].Name) == 0 {

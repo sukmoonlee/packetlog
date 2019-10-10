@@ -24,11 +24,11 @@ import (
 )
 
 // PGversion is build version - read README/CHANGE
-const PGversion = "1.0.1-20190828"
+const PGversion = "1.0.2-20191010"
 
 var localAddr = make(map[string]string)
 var (
-	iface      = flag.String("i", getEnvStr("DNSLOG_DEVICE", "bond1"), "Interface to read from")
+	iface      = flag.String("i", getEnvStr("DNSLOG_DEVICE", "eth0"), "Interface to read from")
 	cpuprofile = flag.String("cpuprofile", "", "If non-empty, write CPU profile here")
 	cpuNo      = flag.Int("cpu", getEnvInt("DNSLOG_CPUNO", runtime.NumCPU()), "Number of DNS parsing goroutine")
 	snaplen    = flag.Int("s", getEnvInt("DNSLOG_SNAPLEN", 1560), "Snaplen, if <= 0, use 65535")
