@@ -22,13 +22,11 @@ type logMessage struct {
 var logChannel chan logMessage
 
 func logSetup(logDir string) {
-	now := time.Now()
-	nanos := now.UnixNano()
 	var logFile string
 	if *logSplit == true {
-		logFile = filepath.Join(logDir, "dns-CQ-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+		logFile = filepath.Join(logDir, "dns-CQ-"+time.Now().Format("20060102-15")+".log")
 	} else {
-		logFile = filepath.Join(logDir, "dns-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+		logFile = filepath.Join(logDir, "dns-"+time.Now().Format("20060102-15")+".log")
 	}
 	//logFile := fmt.Sprintf("%s/dns-%s.log", logDir, time.Unix(0, nanos).Format("20060102-15"))
 
@@ -51,26 +49,21 @@ func logSetup(logDir string) {
 		if *logSplit == false {
 			f[0], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
 		} else {
-			now := time.Now()
-			nanos := now.UnixNano()
-			logFile = filepath.Join(logDir, "dns-CQ-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+			logFile = filepath.Join(logDir, "dns-CQ-"+time.Now().Format("20060102-15")+".log")
 			f[1], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
-			logFile = filepath.Join(logDir, "dns-CR-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+			logFile = filepath.Join(logDir, "dns-CR-"+time.Now().Format("20060102-15")+".log")
 			f[2], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
-			logFile = filepath.Join(logDir, "dns-SQ-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+			logFile = filepath.Join(logDir, "dns-SQ-"+time.Now().Format("20060102-15")+".log")
 			f[3], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
-			logFile = filepath.Join(logDir, "dns-SR-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+			logFile = filepath.Join(logDir, "dns-SR-"+time.Now().Format("20060102-15")+".log")
 			f[4], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
 		}
 		for logMsg := range logChannel {
 			if logMsg.msg[0:2] != last {
-				now := time.Now()
-				nanos := now.UnixNano()
-
 				if *logSplit == false {
 					f[0].Close()
 
-					logFile = filepath.Join(logDir, "dns-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+					logFile = filepath.Join(logDir, "dns-"+time.Now().Format("20060102-15")+".log")
 					f[0], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
 				} else {
 					f[1].Close()
@@ -78,13 +71,13 @@ func logSetup(logDir string) {
 					f[3].Close()
 					f[4].Close()
 
-					logFile = filepath.Join(logDir, "dns-CQ-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+					logFile = filepath.Join(logDir, "dns-CQ-"+time.Now().Format("20060102-15")+".log")
 					f[1], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
-					logFile = filepath.Join(logDir, "dns-CR-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+					logFile = filepath.Join(logDir, "dns-CR-"+time.Now().Format("20060102-15")+".log")
 					f[2], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
-					logFile = filepath.Join(logDir, "dns-SQ-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+					logFile = filepath.Join(logDir, "dns-SQ-"+time.Now().Format("20060102-15")+".log")
 					f[3], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
-					logFile = filepath.Join(logDir, "dns-SR-"+time.Unix(0, nanos).Format("20060102-15")+".log")
+					logFile = filepath.Join(logDir, "dns-SR-"+time.Now().Format("20060102-15")+".log")
 					f[4], _ = os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModeAppend|0600)
 				}
 
