@@ -5,8 +5,13 @@
 
 rm -f dnslog
 set -x
+
+# go get -u golang.org/x/tools/cmd/goimports
 find . -name '*.go' -exec goimports -d -w {} \;
+
+# go get -u golang.org/x/lint/golint
 golint -min_confidence=0.1 .
+
 go build -v -o dnslog
 #go build -v -race -o dnslog
 #go build -v -msan -o dnslog
