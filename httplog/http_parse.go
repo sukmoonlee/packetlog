@@ -28,7 +28,6 @@ func packetSetup() {
 	packetChannel = make(chan packetMessage, 10240)
 
 	log.Printf("create %d http parsing goroutine", *cpuNo)
-	httpPortStr := string(*httpPort)
 	for i := 1; i <= *cpuNo; i++ {
 		go func() {
 			for pktMsg := range packetChannel {
@@ -125,22 +124,22 @@ func packetSetup() {
 					tcp, _ := tcpLayer.(*layers.TCP)
 					SrcPort = fmt.Sprintf("%d", tcp.SrcPort)
 					DstPort = fmt.Sprintf("%d", tcp.DstPort)
+
+					if localAddr[DstIP] == "" {
+						if int(tcp.SrcPort) == *httpPort {
+							SaveLog.lType = "CR"
+						} else {
+							SaveLog.lType = "SQ"
+						}
+					} else {
+						if int(tcp.DstPort) == *httpPort {
+							SaveLog.lType = "CQ"
+						} else {
+							SaveLog.lType = "SR"
+						}
+					}
 				} else {
 					continue
-				}
-
-				if localAddr[DstIP] == "" {
-					if SrcPort == httpPortStr {
-						SaveLog.lType = "CR"
-					} else {
-						SaveLog.lType = "SQ"
-					}
-				} else {
-					if DstPort == httpPortStr {
-						SaveLog.lType = "CQ"
-					} else {
-						SaveLog.lType = "SR"
-					}
 				}
 
 				SaveLog.msg = fmt.Sprintf("%s %s#%s %s#%s %s %s\n", pktMsg.ci.Timestamp.Format("2006-01-02 15:04:05.000"), SrcIP, SrcPort, DstIP, DstPort, SaveLog.lType, result)
